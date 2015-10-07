@@ -24,6 +24,7 @@ function merge(base, add) {
   return base;
 }
 
+
 function unflatten(json) {
   return Object.keys(json).reduceRight(function(prev, key) {
     return merge(prev, key.split('.').reduceRight(function (prev, curr) {
@@ -35,20 +36,31 @@ function unflatten(json) {
 }
 
 function reverse(json) {
+    console.log(json);
   return Object.keys(json).reduceRight(function (newObject, value) {
     newObject[value] = json[value];
     return newObject;
   }, {});
 }
 
+function reverse_parts(json) {
+    console.log(json);
+    return Object.keys(json).reduceRight(function (newObject, value) {
+        newObject[value] = json[value];
+        return {part:newObject};
+    }, {});
+}
+
 module.exports = function (grunt) {
   grunt.registerMultiTask('jsonAngularTranslate', 'The best Grunt plugin ever.', function () {
     var extractLanguage;
+      var part;
     var options = this.options({
       moduleName: 'translations',
       extractLanguage: /..(?=\.[^.]*$)/,
       hasPreferredLanguage: true,
-      createNestedKeys: true
+      createNestedKeys: true,
+        extractPart: /i18n\/(.*)\//
     });
 
     if (typeof(options.extractLanguage) === 'function') {
@@ -61,11 +73,14 @@ module.exports = function (grunt) {
 
     this.files.forEach(function (file) {
       // Concat specified files.
-      var language,
+        console.log(file);
+        var language,
           keys;
       var src = file.src.filter(function (filepath) {
         // Warn on and remove invalid source files (if nonull was set).
-        if (!grunt.file.exists(filepath)) {
+          console.log(filepath);
+
+          if (!grunt.file.exists(filepath)) {
           grunt.log.warn('Source file "' + filepath + '" not found.');
           return false;
         } else {
@@ -73,14 +88,17 @@ module.exports = function (grunt) {
         }
       }).map(function (filepath) {
         // Read file source.
-        var currLanguage = extractLanguage(filepath);
+          var currLanguage = extractLanguage(filepath);
         if (language && language !== currLanguage) {
           throw 'inconsistent language: ' + filepath + ' (' + currLanguage + ' !== ' + language + ')';
         }
         language = currLanguage;
-
-        var processor = (options.createNestedKeys ? unflatten : reverse);
-        return processor(JSON.parse(grunt.file.read(filepath)));
+          part = filepath.match(options.extractPart)[1];
+          console.log(part)
+          var processor = (options.createNestedKeys ? unflatten : reverse);
+          var myObj = new Object;
+           myObj[part]= JSON.parse(grunt.file.read(filepath))
+        return processor(myObj);
       }).reduce(extend, {});
 
       src = grunt.template.process(multiline(function(){/*
@@ -92,10 +110,13 @@ try {
   angular.module('<%= moduleName %>', ['pascalprecht.translate']);
 }
 
-angular.module('<%= moduleName %>').config(['$translateProvider', function ($translateProvider) {
+angular.module('<%= moduleName %>').config(['$translateProvider', function ($translateProvider,$translatePartialLoaderProvider) {
   var translations = <%= translations %>;
-  $translateProvider.translations('<%= language %>', translations);
-  $translateProvider.translations(translations);
+       for (var key in translations) {
+       if (translations.hasOwnProperty(key)) {
+       $translatePartialLoaderProvider.setPart('<%= language %>',key,p[key])
+       }
+       }
   if ($translateProvider.preferredLanguage) {
       $translateProvider.preferredLanguage('<%= language %>');
   }
