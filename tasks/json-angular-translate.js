@@ -110,12 +110,12 @@ try {
   angular.module('<%= moduleName %>', ['pascalprecht.translate']);
 }
 
-angular.module('<%= moduleName %>').config(['$translateProvider', function ($translateProvider,$translatePartialLoaderProvider) {
+angular.module('<%= moduleName %>').config(['$translateProvider',$translatePartialLoaderProvider, function ($translateProvider,$translatePartialLoaderProvider) {
   var translations = <%= translations %>;
        for (var key in translations) {
-       if (translations.hasOwnProperty(key)) {
+
        $translatePartialLoaderProvider.setPart('<%= language %>',key,p[key])
-       }
+
        }
   if ($translateProvider.preferredLanguage) {
       $translateProvider.preferredLanguage('<%= language %>');
